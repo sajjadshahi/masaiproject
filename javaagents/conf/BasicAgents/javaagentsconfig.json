@@ -1,0 +1,32 @@
+{
+  "agents" : {
+    "agentA1" : {"entity" : "connectionA1", "team" : "A", "class" : "MiladAgent"},
+    "agentA2" : {"entity" : "connectionA2", "team" : "A", "class" : "MiladAgent"},
+    "agentA3" : {"entity" : "connectionA3", "team" : "A", "class" : "MiladAgent"},
+    "agentA4" : {"entity" : "connectionA4", "team" : "A", "class" : "MiladAgent"},
+    "agentA5" : {"entity" : "connectionA5", "team" : "A", "class" : "MiladAgent"},
+    "agentA6" : {"entity" : "connectionA6", "team" : "A", "class" : "MiladAgent"},
+	"agentA7" : {"entity" : "connectionA7", "team" : "A", "class" : "MiladAgent"},
+    "agentA8" : {"entity" : "connectionA8", "team" : "A", "class" : "MiladAgent"},
+    "agentA9" : {"entity" : "connectionA9", "team" : "A", "class" : "MiladAgent"},
+    "agentA10" : {"entity" : "connectionA10", "team" : "A", "class" : "MiladAgent"},
+    "agentA11" : {"entity" : "connectionA11", "team" : "A", "class" : "MiladAgent"},
+    "agentA12" : {"entity" : "connectionA12", "team" : "A", "class" : "MiladAgent"},
+	"agentA13" : {"entity" : "connectionA13", "team" : "A", "class" : "MiladAgent"},
+    "agentA14" : {"entity" : "connectionA14", "team" : "A", "class" : "MiladAgent"},
+    "agentA15" : {"entity" : "connectionA15", "team" : "A", "class" : "MiladAgent"},
+    "agentA16" : {"entity" : "connectionA16", "team" : "A", "class" : "MiladAgent"},
+    "agentA17" : {"entity" : "connectionA17", "team" : "A", "class" : "MiladAgent"},
+    "agentA18" : {"entity" : "connectionA18", "team" : "A", "class" : "MiladAgent"},
+	"agentA19" : {"entity" : "connectionA19", "team" : "A", "class" : "MiladAgent"},
+    "agentA20" : {"entity" : "connectionA20", "team" : "A", "class" : "MiladAgent"},
+    "agentA21" : {"entity" : "connectionA21", "team" : "A", "class" : "MiladAgent"},
+    "agentA22" : {"entity" : "connectionA22", "team" : "A", "class" : "MiladAgent"},
+    "agentA23" : {"entity" : "connectionA23", "team" : "A", "class" : "MiladAgent"},
+    "agentA24" : {"entity" : "connectionA24", "team" : "A", "class" : "MiladAgent"},
+	"agentA25" : {"entity" : "connectionA25", "team" : "A", "class" : "MiladAgent"},
+    "agentA26" : {"entity" : "connectionA26", "team" : "A", "class" : "MiladAgent"},
+    "agentA27" : {"entity" : "connectionA27", "team" : "A", "class" : "MiladAgent"},
+    "agentA28" : {"entity" : "connectionA28", "team" : "A", "class" : "MiladAgent"}
+  }
+}
