@@ -9,13 +9,22 @@ import eis.iilang.Action;
 import eis.iilang.Identifier;
 import eis.iilang.Numeral;
 import eis.iilang.Percept;
-import massim.javaagents.MailService;
-import massim.javaagents.percept.*;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+
+import massim.javaagents.MailService;
 
 import static massim.javaagents.agents.WarpAgent.stringParam;
 
+import massim.javaagents.percept.*;
+
+/**
+ * @author Erfan and Sajad
+ */
 public class OwnAgent extends Agent {
     private AgentPercepts percept = new AgentPercepts();
     private Queue<Action> toBeDone = new LinkedList<>();
@@ -34,13 +43,10 @@ public class OwnAgent extends Agent {
     private Set<String> jobsTaken = new HashSet<>();
     private boolean isDeliverJob;
 
-    private auction currentMission;
-    private auction currentAuction;
-
-    private boolean mustBeCharged;
-
     public OwnAgent(String name, MailService mailbox) {
         super(name, mailbox);
+        isDeliverJob = false;
+        System.out.printf("Design by sajad and erfan");
     }
 
     private boolean lastJobWasSuccessful(String jobTitle) {
@@ -49,26 +55,17 @@ public class OwnAgent extends Agent {
 
     private void charge() {
         if (lastJobWasSuccessful("charge")) {
-            if (percept.getSelfInfo().getCharge() > percept.getSelfRole().getBattery() - 10) {
-                mustBeCharged = false;
+//            ALREADY IN STATION
+            if (enoughCharge()) {
                 toBeDone.clear();
-            }
-            else {
+            } else {
                 toBeDone.add(new Action("charge"));
             }
             return;
         }
-        int routeLength = percept.getRouteLength();
-        if (percept.getRoutes().size() > 1 && routeLength > 1) {
-            if (percept.getSelfInfo().getCharge() < 20)
-                toBeDone.add(new Action("recharge"));
-            else
-                toBeDone.add(new Action("goto", new Identifier(findNearestChargeStation())));
-        } else {
+//        NOT IN STATION
             toBeDone.add(new Action("goto", new Identifier(findNearestChargeStation())));
             toBeDone.add(new Action("charge"));
-        }
-
     }
 
     @Override
@@ -77,6 +74,49 @@ public class OwnAgent extends Agent {
 
     private boolean checkCharge() {
         return percept.getSelfInfo().getCharge() >= 100;
+    }
+
+    private boolean enoughCharge(){
+        return percept.getSelfInfo().getCharge() > percept.getSelfRole().getBattery() - 10;
+    }
+
+    private Pair<job, shop> getBestJob(Set<String> jobs) {
+        Pair<shop, Double> bestJobDecision = null;
+        double minDist = Double.MAX_VALUE;
+        job bestJob = null;
+        shop bestShop = null;
+        for (String jobStr : jobs) {
+            job jobInstance = percept.Jobs.get(jobStr);
+            double currentDist = getBestPathToStorage(jobInstance).getRight();
+            if (currentDist < minDist) {
+                minDist = currentDist;
+                bestJob = jobInstance;
+                bestShop = getBestPathToStorage(jobInstance).getLeft();
+            }
+        }
+        return new Pair<job, shop>(bestJob, bestShop);
+    }
+
+    private Pair<shop, Double> getBestPathToStorage(job jobInstance) {
+        shop nearestShop = null;
+        double dist = Double.MAX_VALUE;
+        storage jobStorage = percept.Storages.get(jobInstance.getJobStorage());
+        double storageLat = jobStorage.getLat(), storageLon = jobStorage.getLon();
+        List<shop> shops = percept.shopsByItem.get(jobInstance.getJobRequireds().get(0).getLeft());
+        if (shops != null) {
+            for (shop sh : shops) {
+                double myLat = percept.getSelfInfo().getLat(), myLon = percept.getSelfInfo().getLon(), shopLat = sh.getShopLat(), shopLon = sh.getShopLat();
+                double distanceFromAgentToShop = findLinearDistance(myLat, myLon, shopLat, shopLon);
+                double distanceFromShopToStorage = findLinearDistance(shopLat, shopLon, storageLat, storageLon);
+                double outcomeDistance = distanceFromAgentToShop + distanceFromShopToStorage;
+                if (outcomeDistance < dist) {
+                    dist = outcomeDistance;
+                    nearestShop = sh;
+                }
+            }
+        }
+        return new Pair<shop, Double>(nearestShop, dist);
+
     }
 
     private void handleLastActionResult(String res) {
@@ -91,16 +131,16 @@ public class OwnAgent extends Agent {
 
     @Override
     public Action step() {
-        // todo : first location near --- testing
-        // Todo : charge again
+        // todo : first location near --- done
+        // Todo : charge again -- done
         // Todo : dynamic charge again strategy --- bug
-        // todo : don't check until receive --- bug
-        // todo : loop shop
+        // todo : don't check until receive --- partial done
+        // todo : loop shop -- done
         // todo : give and receive (token-ring)
         // todo : bikhial when error in deliver or buy, access next job
-        // todo : time limit for jobs
-        // todo : error handling
-        // todo : failed capacity
+        // todo : time limit for jobs --- mastMali
+        // todo : error handling --- partialy
+        // todo : failed capacity --- done
         // todo : resource nodes (observability)
 //      POLL IMMEDIATELY
 
@@ -130,26 +170,28 @@ public class OwnAgent extends Agent {
             jobsPercept = new HashSet<>(percept.Jobs.keySet());
             jobsPercept.removeAll(jobsTaken);
             if (jobsPercept.size() > 0) {
-                assignedJobStr = jobsPercept.iterator().next();
-                currentJob = percept.Jobs.get(assignedJobStr);
+                Pair<job, shop> bestJobShop = getBestJob(jobsPercept);
+                currentJob = bestJobShop.getLeft();
+                shopInstance = bestJobShop.getRight();
+                shop = shopInstance.getShopName();
+                assignedJobStr = currentJob.getJobID();
                 jobsTaken.add(assignedJobStr);
                 broadcast(new Percept("taken", new Identifier(assignedJobStr)), getName());
             }
         }
         if (assignedJobStr != null) {
-            if ((lastAction.compareTo("buy") == 0) && (lastActionResult.compareTo("successful") == 0)) {
+            if (lastJobWasSuccessful("buy")) {
                 isDeliverJob = true;
                 toBeDone.clear();
-            }
-            if (lastAction.compareTo("deliver_job") == 0 && lastActionResult.compareTo("successful") == 0) {
+            } else if (lastJobWasSuccessful("deliver_job")) {
                 isDeliverJob = false;
                 assignedJobStr = null;
                 toBeDone.clear();
             }
-            
+
             if (checkCharge()) {
                 int performJobStatus = performJob();
-                if (performJobStatus < 0){
+                if (performJobStatus < 0) {
                     currentJob = null;
                     assignedJobStr = null;
                 }
@@ -157,11 +199,11 @@ public class OwnAgent extends Agent {
                 charge();
                 return new Action("recharge");
             }
-            
+
             if (currentJob == null) {
                 return new Action("recharge");
             }
-            
+
         }
         if (toBeDone.size() > 0) {
             return toBeDone.poll();
@@ -179,77 +221,29 @@ public class OwnAgent extends Agent {
         }
     }
 
-    private boolean inTheShop(shop shopInstance) {
-        double myLat = percept.getSelfInfo().getLat();
-        double myLon = percept.getSelfInfo().getLon();
-
-        double shopLat = shopInstance.getShopLat();
-        double shopLon = shopInstance.getShopLon();
-
-        return (myLat == shopLat && myLon == shopLon);
-    }
-
     private int performJob() {
-        /*if (currentJob.getJobEnd() > this.getStepNumber() + percept.getRouteLength()){
-            return -1;
-        }*/
+
         if (isDeliverJob) {
-            toBeDone.add(new Action("goto", new Identifier(currentJob.getJobStorage())));
-            toBeDone.add(new Action("deliver_job", new Identifier(assignedJobStr)));
-        } else {
-
-            for (int i = 0; i < currentJob.getJobRequireds().size(); i++) {
-
-                String itemName = currentJob.getJobRequireds().get(i).getLeft();
-                int amount = currentJob.getJobRequireds().get(i).getRight();
-
-                shopInstance = null;
-                List<shop> shops = percept.shopsByItem.get(itemName);
-
-                if (shop == null && shops != null && shopInstance != null) {
-                    shopInstance = findNearestshop(currentJob.getJobStorage(), itemName, amount);
-                    if (shopInstance == null){
-                        return -1;
-                    }
-                    shop = shopInstance.getShopName();
-                }
-//                TODO: Fix
-//                if (inTheShop(shopInstance)) {
-                if (lastActionResult.compareTo("successful") == 0) {
-                    toBeDone.add(new Action("buy", new Identifier(itemName), new Numeral(amount)));
-                    toBeDone.add(new Action("goto", new Identifier(shop)));
-                } else {
-                    toBeDone.add(new Action("goto", new Identifier(shop)));
-                }
-            
+            if (lastActionResult.equals("failed_location")) {
+                toBeDone.add(new Action("goto", new Identifier(currentJob.getJobStorage())));
+            } else {
+                toBeDone.add(new Action("goto", new Identifier(currentJob.getJobStorage())));
+                toBeDone.add(new Action("deliver_job", new Identifier(assignedJobStr)));
             }
+        } else {
+            String itemName = currentJob.getJobRequireds().get(0).getLeft();
+            int amount = currentJob.getJobRequireds().get(0).getRight();
+            if (lastActionResult.equals("failed_location")) {
+                toBeDone.add(new Action("goto", new Identifier(shop)));
+            } else {
+                toBeDone.add(new Action("goto", new Identifier(shop)));
+                toBeDone.add(new Action("buy", new Identifier(itemName), new Numeral(amount)));
+            }
+
         }
         return 1;
     }
 
-    private shop findNearestshop(String storage, String itemName, int itemAmount) {
-        double minDistance = Double.MAX_VALUE;
-        shop shopInstance = null;
-        storage tempStorage = percept.Storages.get(storage);
-        List<shop> shops = percept.shopsByItem.get(itemName);
-        if (shops != null) {
-            for (shop sh : shops){
-                double shopLat = sh.getShopLat(), shopLon = sh.getShopLon(), storageLat = tempStorage.getLat(), storageLon = tempStorage.getLon();
-                double dist = findLinearDistance(shopLat, shopLon, storageLat, storageLon);
-                if (dist < minDistance) {
-                    if (sh.ShopItemsMap.get(itemName).getAmount() >= itemAmount) {
-                        minDistance = dist;
-                        shopInstance = sh;
-                    }
-                }
-            }
-        } else {
-            currentJob = null;
-            assignedJobStr = null;
-            return null;
-        }
-        return shopInstance;
-    }
 
     private double findLinearDistance(double d1Lat, double d1Lon, double d2Lat, double d2Lon) {
         return Math.sqrt(Math.pow((d1Lat - d2Lat), 2) + Math.pow((d1Lon - d2Lon), 2));
